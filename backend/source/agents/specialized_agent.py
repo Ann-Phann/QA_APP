@@ -11,7 +11,7 @@ class QuestionClassificationAgent(BaseAgent):
         Instruction:
         - Yes/No questions typically start with words like "is", "are", "can", "do", "will", etc.
         - Explanation questions ofter start with "why", "how", "explain", etc.
-        - List questions usually contain words like "list", "steps", "point out", "what are the stages", "how to", etc.
+        - List questions usually contain words like "list", "steps", "point out", "what are the stages", "how to", "how many" etc.
         - Comparision questions often include "difference", "compare", "distinguish", etc, and involve comparing objects/etc.
         - If the question does not fit into any of these categories, classify it as "Other".
 
@@ -98,7 +98,7 @@ class SummaryAgent(BaseAgent):
 
     def get_prompt_template(self) ->str:
         return """
-        Please analyze and summarize the conversation context:
+        Please analyze and summarize the conversation context in 2 to 3 sentences:
 
         Chat History: {chat_history}
 
