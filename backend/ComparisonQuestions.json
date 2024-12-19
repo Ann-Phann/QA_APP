@@ -1,0 +1,34 @@
+{
+    "questions": [
+        {
+            "question": "What is the difference between Python and C++?"
+        },
+        {
+            "question": "How do electric cars compare to gasoline cars?"
+        },
+        {
+            "question": "What is the difference bewteen cv and resume?"
+        },
+        {
+            "question": "How does remote work differ from office work?"
+        },
+        {
+            "question": "How does a smartphone differ from a traditional phone?"
+        },
+        {
+            "question": "How does solar energy compare to wind energy?"
+        },
+        {
+            "question": "What is the difference between a laptop and a desktop computer?"
+        },
+        {
+            "question": "How do renewable and non-renewable energy sources compare?"
+        },
+        {
+            "question":  "How do online classes differ from in-person classes?"
+        },
+        {
+            "question": "How does Python differ from JavaScript for web development?"
+        }
+    ]
+}

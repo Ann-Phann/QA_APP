@@ -1,0 +1,34 @@
+{
+    "questions": [
+        {
+            "question": "Who invented the telephone?"
+        },
+        {
+            "question": "Where is the Great Wall of China located?"
+        },
+        {
+            "question": "what is the color of the sky?"
+        },
+        {
+            "question": "What is the capital of France?"
+        },
+        {
+            "question": "Who wrote the play 'Romeo and Juliet'?"
+        },
+        {
+            "question": "What is the largest mammal in the world?"
+        },
+        {
+            "question": "Where is Mount Everest situated?"
+        },
+        {
+            "question": "When did humans first land on the moon?"
+        },
+        {
+            "question": "What is the national animal of Australia?"
+        },
+        {
+            "question": "Who painted the Mona Lisa?"
+        }
+    ]
+}

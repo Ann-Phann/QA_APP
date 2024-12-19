@@ -1,0 +1,34 @@
+{
+    "questions": [
+        {
+            "question": "Explain the challenges when studying programming?"
+        },
+        {
+            "question": "Why is the sky blue?"
+        },
+        {
+            "question": "Why we need to learn about AI?"
+        },
+        {
+            "question": "Why do plants need water?"
+        },
+        {
+            "question": "How does gravity keep us on the ground?"
+        },
+        {
+            "question": "How does a car work?"
+        },
+        {
+            "question": "Why do we need sleep?"
+        },
+        {
+            "question": "Why do birds migrate during winter?"
+        },
+        {
+            "question": "Why do humans need food?"
+        },
+        {
+            "question": "How does a rainbow form?"
+        }
+    ]
+}

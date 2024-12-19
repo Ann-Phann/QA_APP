@@ -1,0 +1,34 @@
+{
+    "questions": [
+        {
+            "question": "Point out 3 different programming languages that are usually used in web development?"
+        },
+        {
+            "question": "List 3 benefits of a healthy diet."
+        },
+        {
+            "question": "How to do screenshot in Windows laptop?"
+        },
+        {
+            "question": "What are the advantages of remote work?"
+        },
+        {
+            "question": "List the steps to boil an egg."
+        },
+        {
+            "question": "List the primary colors."
+        },
+        {
+            "question": "List the 2 pros and 2 cons of electric vehicles."
+        },
+        {
+            "question": "What are the stages of the software development lifecycle?"
+        },
+        {
+            "question": "How to prepare for an exam in general?"
+        },
+        {
+            "question": "List the different types of renewable energy sources."
+        }
+    ]
+}

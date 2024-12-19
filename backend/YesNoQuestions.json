@@ -1,0 +1,34 @@
+{
+    "questions": [
+        {
+            "question": "Is AI powerful in programming?"
+        },
+        {
+            "question": "Can fish live without water?"
+        },
+        {
+            "question": "Is Python a programming language?"
+        },
+        {
+            "question": "Do humans need sleep?"
+        },
+        {
+            "question": "Is the Earth flat?"
+        },
+        {
+            "question": "Can AI replace human jobs?"
+        },
+        {
+            "question": "Is climate change real?"
+        },
+        {
+            "question": "Are electric cars better for the environment?"
+        },
+        {
+            "question": "Is it possible to travel faster than light?"
+        },
+        {
+            "question": "Do we have a cure for cancer?"
+        }
+    ]
+}
