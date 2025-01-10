@@ -1,2 +1,5 @@
 # ignore ALL .log files
 *.env
+
+# ignore the virtual environment
+/backend/venv/
