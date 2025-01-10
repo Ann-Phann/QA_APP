@@ -148,7 +148,6 @@ class ChatService:
             response = "I found the following information:\n"
 
             for doc in results['documents']:
-                
                 response += f"- {doc}\n"
               
 
@@ -264,7 +263,3 @@ class ChatService:
     
     def rename_chat(self, old_id: str, new_id: str) -> bool:
         return self.chat_history.rename_chat(old_id, new_id)
-    
-
-        
-            
