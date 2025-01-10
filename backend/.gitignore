@@ -3,3 +3,30 @@
 
 # ignore the virtual environment
 /backend/venv/
+
+
+# Ignore Python bytecode files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Ignore virtual environment folder
+/venv/
+
+# Ignore IDE/editor-specific files (if applicable)
+.vscode/
+.idea/
+*.swp
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.back
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore any other environment-specific or hidden files
+.env

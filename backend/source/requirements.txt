@@ -4,3 +4,8 @@ langchain-core
 langchain-ollama
 flask
 flask-cors
+chromadb
+transformers
+torch
+sentence-transformers
+langchain-huggingface

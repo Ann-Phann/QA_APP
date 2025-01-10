@@ -91,6 +91,16 @@ class ChatApp:
             except Exception as e:
                 print(f"Error renaming chat: {str(e)}")
                 return jsonify({"error": str(e)}), 500
+            
+        @self.app.route("/api/process_documents", methods=['POST'])
+        def process_documents():
+            """Endpoint to process documents for RAG."""
+            try:
+                self.chat_service.document_processor.process_documents()
+                return jsonify({"message": "Documents processed successfully"})
+            except Exception as e:
+                print(f"Error processing documents: {str(e)}")
+                return jsonify({"error": str(e)}), 500
 
     def run(self, debug=False):
         """Run the Flask application."""

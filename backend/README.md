@@ -17,7 +17,7 @@ Or
 source venv/Scripts/activate
 
 3. Install dependencies
-pip install -r requirements.txt
+pip install -r source/requirements.txt
 
 4. Run the application
 python -m source.app
