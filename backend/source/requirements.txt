@@ -9,3 +9,7 @@ transformers
 torch
 sentence-transformers
 langchain-huggingface
+nltk
+unstructured
+python-magic-bin; sys_platform == 'win32'
+python-magic; sys_platform != 'win32'

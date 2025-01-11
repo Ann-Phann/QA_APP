@@ -6,7 +6,11 @@ from ..services.document_processor import DocumentProcessor
 from langchain_core.documents import Document
 import chromadb
 from transformers import pipeline
-from uuid import uuid4
+import logging
+import numpy as np
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class ChatService:
     """ Handlechat operations and agent selection """
@@ -108,6 +112,7 @@ class ChatService:
                 self.chat_history.add_message(chat_id, ChatMessage("user", question))
                 self.chat_history.add_message(chat_id, ChatMessage("assistant", response))
 
+                print(f"After RAG")
                 return response
             
             except Exception as e:
@@ -130,33 +135,47 @@ class ChatService:
 
     def retrieve_from_rag(self, question: str) -> str:
         """Retrieve relevant information from Chroma for factual questions."""
-        # question_embedding = self.document_processor.embedding_model.embed([question])
-        question_embedding = self.document_processor.embed_documents([question])
-        print(f"Question Embedding: {question_embedding}")
-
-        # if question_embedding.ndim == 2 and question_embedding.shape[0] == 1:
-        #     question_embedding = question_embedding[0]
-
-        try: 
-            # Log the state of the collection
-
-            results = self.collection.query(query_embeddings=question_embedding, n_results=5)
-            print(f"QueryResults: {results}")
+        try:
+            question_embedding = self.document_processor.embed_documents([question])
+            results = self.collection.query(
+                query_embeddings=question_embedding, 
+                n_results=10  # Get more results for ranking
+            )
+            
             if not results['documents']:
                 return "No relevant information found."
-            print("before response")
-            response = "I found the following information:\n"
-
-            for doc in results['documents']:
-                response += f"- {doc}\n"
-              
-
-            print("before return")
-            return response
-        
+            
+            # Rank chunks based on semantic similarity to question
+            ranked_chunks = self._rank_chunks(question, results['documents'][0])
+            
+            # Get top chunks
+            top_chunks = ranked_chunks[:3]
+            
+            # Create a summarization prompt
+            summary_prompt = f"""
+            Question: {question}
+            
+            Context from documents:
+            {' '.join(chunk for chunk, _ in top_chunks)}
+            
+            Please provide a clear and concise answer based on the above context. 
+            Focus only on information that directly answers the question.
+            If specific numbers, dates, or criteria are mentioned, include those.
+            """
+            
+            # Get summarized answer from response agent
+            summarized_answer = self.response_agent.process(
+                context="",  # Context is already in the prompt
+                question=summary_prompt,
+                reasoning_examples="Provide direct, factual information from the context.",
+                output_format="Concise answer with bullet points if multiple items exist."
+            )
+            
+            return summarized_answer
+            
         except Exception as e:
-            print(f"Error in query collection: {e}")
-            return "Error occured while retrieving information from RAG"
+            logger.error(f"Error in RAG retrieval: {e}")
+            return "Error occurred while retrieving information"
         
 
     def extract_relevant_info(self, document: str, question: str) -> str:
@@ -263,3 +282,39 @@ class ChatService:
     
     def rename_chat(self, old_id: str, new_id: str) -> bool:
         return self.chat_history.rename_chat(old_id, new_id)
+
+    def _rank_chunks(self, question: str, chunks: List[str]) -> List[tuple]:
+        """Rank chunks based on semantic similarity to question."""
+        try:
+            # Get embeddings for question and chunks
+            question_embedding = self.document_processor.embed_documents([question])[0]
+            chunk_embeddings = self.document_processor.embed_documents(chunks)
+            
+            # Calculate similarity scores
+            ranked_results = []
+            for chunk, chunk_embedding in zip(chunks, chunk_embeddings):
+                # Calculate cosine similarity
+                similarity = self._calculate_similarity(question_embedding, chunk_embedding)
+                ranked_results.append((chunk, similarity))
+            
+            # Sort by similarity score in descending order
+            return sorted(ranked_results, key=lambda x: x[1], reverse=True)
+            
+        except Exception as e:
+            logger.error(f"Error in ranking chunks: {e}")
+            return [(chunk, 0.0) for chunk in chunks]
+
+    def _calculate_similarity(self, embedding1, embedding2) -> float:
+        """Calculate cosine similarity between two embeddings."""
+        try:
+            # Normalize the embeddings
+            norm1 = np.linalg.norm(embedding1)
+            norm2 = np.linalg.norm(embedding2)
+            if norm1 == 0 or norm2 == 0:
+                return 0.0
+            
+            # Calculate cosine similarity
+            return np.dot(embedding1, embedding2) / (norm1 * norm2)
+        except Exception as e:
+            logger.error(f"Error calculating similarity: {e}")
+            return 0.0

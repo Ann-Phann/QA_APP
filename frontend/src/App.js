@@ -6,6 +6,7 @@ function App() {
   const [currentChat, setCurrentChat] = useState(null);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchChats();
@@ -31,6 +32,7 @@ function App() {
     const newMessage = { role: 'user', content: input };
     setMessages([...messages, newMessage]);
     setInput('');
+    setIsLoading(true);
 
     try {
       const response = await fetch(`http://localhost:5000/api/chat/${currentChat}`, {
@@ -44,14 +46,20 @@ function App() {
       setMessages([...messages, newMessage, data]);
     } catch (error) {
       console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const loadChat = async (chatId) => {
-    setCurrentChat(chatId);
-    const response = await fetch(`http://localhost:5000/api/chat/${chatId}`);
-    const data = await response.json();
-    setMessages(data);
+    try {
+      const response = await fetch(`http://localhost:5000/api/chat/${chatId}`);
+      const data = await response.json();
+      setCurrentChat(chatId);
+      setMessages(data);
+    } catch (error) {
+      console.error('Error loading chat:', error);
+    }
   };
 
   const deleteChat = async (e, chatId) => {
@@ -92,6 +100,13 @@ function App() {
     }
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(e);
+    }
+  };
+
   return (
     <div className="App">
       <div className="sidebar">
@@ -127,9 +142,14 @@ function App() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your question..."
+            onKeyDown={handleKeyPress}
+            placeholder={currentChat ? "Type your question..." : "Please select or create a chat"}
+            disabled={isLoading || !currentChat}
           />
-          <button type="submit">Send</button>
+          <button type="submit" disabled={isLoading || !currentChat}>
+            {isLoading ? 'Sending...' : 'Send'}
+          </button>
+          {isLoading && <span className="loading-indicator">Processing...</span>}
         </form>
       </div>
     </div>

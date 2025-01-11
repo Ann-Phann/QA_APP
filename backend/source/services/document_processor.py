@@ -1,224 +1,165 @@
-# from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLoader, TextLoader
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
-# # from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-# # #from langchain_community.embeddings import HuggingFaceEmbeddings
-# # import chromadb
-# # import torch
-# from transformers import AutoTokenizer, AutoModel
-# import torch
-# import chromadb
-
-# class DocumentProcessor:
-#     def __init__(self):
-#         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-#         # If you want to use HuggingFaceEmbeddings, uncomment and initialize it properly
-#         # self.embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-#         self.tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
-#         self.model = AutoModel.from_pretrained("sentence-transformers/all-MiniLM-L6-v2") 
-#         self.chroma_client = chromadb.Client()
-#         self.collection = self.chroma_client.create_collection("documents")
-
-#     def process_pdf(self, pdf_path):
-#         try:
-#             loader = PyPDFLoader(pdf_path)
-#             documents = loader.load()
-#             self._process_documents(documents)
-
-#         except Exception as e:
-#             print(f"Error processing PDF {pdf_path}: {e}")
-
-#     def process_html(self, html_path):
-#         try:
-#             loader = UnstructuredHTMLLoader(html_path)
-#             documents = loader.load()
-#             self._process_documents(documents)
-#         except Exception as e:
-#             print(f"Error processing HTML {html_path}: {e}")
-
-#     def process_text(self, text_path):
-#         try:
-#             loader = TextLoader(text_path)
-#             documents = loader.load()
-#             self._process_documents(documents)
-#         except Exception as e:
-#             print(f"Error processing text file {text_path}: {e}")
-
-#     def process_document(self, file_path):
-#         """Process a document based on its file type."""
-#         try:
-#             if file_path.endswith(".pdf"):
-#                 self.process_pdf(file_path)
-#             elif file_path.endswith(".html"):
-#                 self.process_html(file_path)
-#             elif file_path.endswith(".txt"):
-#                 self.process_text(file_path)
-#             else:
-#                 raise ValueError(f"Unsupported file type: {file_path}")
-#         except Exception as e:
-#             print(f"Error processing file {file_path}: {e}")
-
-#     def _process_documents(self, documents):
-        
-#         for doc in documents:
-#             chunks = self.text_splitter.split_text(doc)
-#             # embeddings = self.embedding_model.embed_documents(chunks)
-#             embeddings = self.embed_documents(chunks)
-#             self.collection.add(embeddings=embeddings, documents=chunks)
-
-#     def embed_documents(self, texts):
-#         inputs = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True)
-#         with torch.no_grad():
-#             outputs = self.model(**inputs)
-#         return outputs.last_hidden_state.mean(dim=1).numpy()
-
-    
-
-from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLoader, TextLoader
+from langchain_community.document_loaders import UnstructuredHTMLLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from transformers import AutoTokenizer, AutoModel
-import torch
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.documents import Document
 import chromadb
 from pathlib import Path
 from uuid import uuid4
-from langchain_huggingface import HuggingFaceEmbeddings
+import logging
+from PyPDF2 import PdfReader
+from bs4 import BeautifulSoup
+import re
+from typing import List
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(filename)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 class DocumentProcessor:
-    DATA_PATH = Path("source/documents")  # Define the data path here
+    # Base directory for document storage
+    DATA_PATH = Path("source/documents")
+
     def __init__(self):
-        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=100)
-
-        # Initialize tokenizer and model
-        # try:
-        #     self.tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
-        #     self.model = AutoModel.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
-        # except Exception as e:
-        #     print(f"Error initializing tokenizer/model: {e}")
-        #     raise
-
-        self.embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        # Configure text splitting with overlap for better context preservation
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1024,  # Size of each text chunk
+            chunk_overlap=200,  # Overlap between chunks to maintain context
+            separators=["\n\n", "\n", ". ", " ", ""]  # Priority order for splitting
+        )
+        
+        # Initialize embedding model for semantic search
+        self.embedding_model = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"  # Efficient, general-purpose embeddings
+        )
+        
+        # Setup ChromaDB for vector storage
         self.chroma_client = chromadb.Client()
         self.collection = self.chroma_client.create_collection("documents")
-        print("DocumentProcessor initialized.")
-
+        logger.info("DocumentProcessor initialized")
 
     def load_documents(self):
-        """Load all PDFs and HTML files from the specified data directory"""
+        """Load PDFs and HTML files from the specified data directory"""
         documents = []
+        pdf_count = html_count = 0
 
-         # Check if the directory exists and list files
         if not self.DATA_PATH.exists():
-            print(f"Directory does not exist: {self.DATA_PATH}")
+            logger.error(f"Directory does not exist: {self.DATA_PATH}")
             return documents
 
-        files = list(self.DATA_PATH.glob("*"))
-        print(f"Files found in directory: {files}")
-
-        # Load PDFs
-        for pdf_path in self.DATA_PATH.glob("*.pdf"):
+        # Process each file type
+        for file_path in self.DATA_PATH.glob("*"):
             try:
-                print(f"Loading PDF: {pdf_path}")
-                loader = PyPDFLoader(str(pdf_path))
-                documents.extend(loader.load())
-            except Exception as e:
-                print(f"Error loading PDF {pdf_path}: {e}")
-        # pdf_loader = PyPDFLoader("source/documents/alumni_scholarship.pdf")
-        # documents.extend(pdf_loader.load())
+                if file_path.suffix == '.pdf':
+                    docs = self.process_pdf(str(file_path))
+                elif file_path.suffix == '.html':
+                    docs = self.process_html(str(file_path))
+                else:
+                    continue
 
-
-        # Load HTML files
-        for html_path in self.DATA_PATH.glob("*.html"):
-            try:
-                print(f"Loading HTML: {html_path}")
-                loader = UnstructuredHTMLLoader(str(html_path))
-                documents.extend(loader.load())
+                if docs:
+                    documents.extend(docs)
+                    if file_path.suffix == '.pdf':
+                        pdf_count += 1
+                    elif file_path.suffix == '.html':
+                        html_count += 1
+                    logger.info(f"✓ Loaded {file_path.suffix[1:].upper()}: {file_path.name}")
+                    
             except Exception as e:
-                print(f"Error loading HTML {html_path}: {e}")
-        
-        # Ensure documents are being loaded
-        print(f"DOCUMENT Loaded ")
+                logger.error(f"✗ Failed to load {file_path.name}: {e}")
+
+        logger.info(f"Summary: Loaded {pdf_count} PDFs and {html_count} HTMLs")
         return documents
 
     def process_documents(self):
+        """Process all documents and store in ChromaDB"""
+        # Start document loading phase
+        logger.info("=== Starting Document Loading ===")
         documents = self.load_documents()
-        for doc in documents:
-            if hasattr(doc, 'page_content'):
-                text_content = doc.page_content
-            else:
-                text_content = str(doc)
+        
+        if documents:
+            # Begin processing phase if documents were loaded
+            logger.info("=== Starting Document Processing ===")
+            processed_count = 0  # Track number of processed documents
+            total_chunks = 0    # Track total number of chunks created
+            
+            # Process each document
+            for doc in documents:
+                try:
+                    # Extract text content, handling different document formats
+                    text_content = doc.page_content if hasattr(doc, 'page_content') else str(doc)
+                    
+                    # Split document into smaller chunks for better processing
+                    chunks = self.text_splitter.split_text(text_content)
+                    total_chunks += len(chunks)
+                    
+                    # Create embeddings for semantic search
+                    embeddings = self.embedding_model.embed_documents(chunks)
+                    
+                    # Generate unique IDs for each chunk
+                    ids = [str(uuid4()) for _ in chunks]
+                    
+                    # Store chunks and embeddings in ChromaDB
+                    self.collection.add(
+                        embeddings=embeddings,  # Vector embeddings for semantic search
+                        documents=chunks,       # Text chunks for retrieval
+                        ids=ids                 # Unique identifiers for each chunk
+                    )
+                    processed_count += 1
+                    logger.info(f"✓ Processed document {processed_count}/{len(documents)}")
+                    
+                except Exception as e:
+                    logger.error(f"✗ Failed to process document {processed_count + 1}: {e}")
 
-            chunks = self.text_splitter.split_text(text_content)
-            embeddings = self.embedding_model.embed_documents(chunks)
-            ids = [str(uuid4()) for _ in chunks]
-            self.collection.add(embeddings=embeddings, documents=chunks, ids=ids)
-
+            # Log processing summary
+            logger.info("=== Document Processing Complete ===")
+            logger.info(f"Summary: Processed {processed_count}/{len(documents)} documents into {total_chunks} chunks")
+        else:
+            logger.warning("No documents were loaded, skipping processing")
 
     def process_pdf(self, pdf_path):
-        print(f"Processing PDF: {pdf_path}")
+        """Process a PDF file and return its content"""
         try:
-            loader = PyPDFLoader(pdf_path)
-            documents = loader.load()
-            self._process_documents(documents)
-            print(f"Process documents called")
+            reader = PdfReader(pdf_path)
+            text_content = ""
+            
+            for page in reader.pages:
+                text_content += page.extract_text() + "\n\n"
+            
+            return [Document(page_content=text_content, metadata={"source": pdf_path})]
         except Exception as e:
-            print(f"Error processing PDF {pdf_path}: {e}")
+            logger.error(f"Error processing PDF {pdf_path}: {e}")
+            return None
 
-    def process_html(self, html_path):
+    def process_html(self, file_path: str) -> List[Document]:
+        """Process HTML file and extract meaningful content"""
         try:
-            loader = UnstructuredHTMLLoader(html_path)
-            documents = loader.load()
-            self._process_documents(documents)
+            # Read and parse HTML
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+            soup = BeautifulSoup(content, 'html.parser')
+            
+            # Remove non-content elements to improve quality
+            for script in soup(["script", "style", "nav", "footer", "header"]):
+                script.decompose()
+            
+            # Extract and clean text
+            text = soup.get_text(separator='\n', strip=True)
+            
+            # Normalize whitespace while preserving structure
+            text = re.sub(r'\n\s*\n', '\n\n', text)  # Normalize paragraph breaks
+            text = re.sub(r'[ \t]+', ' ', text)      # Clean up horizontal whitespace
+            
+            return [Document(
+                page_content=text,
+                metadata={"source": file_path}
+            )]
         except Exception as e:
-            print(f"Error processing HTML {html_path}: {e}")
-
-    def process_text(self, text_path):
-        try:
-            loader = TextLoader(text_path)
-            documents = loader.load()
-            self._process_documents(documents)
-        except Exception as e:
-            print(f"Error processing text file {text_path}: {e}")
-
-    def process_document(self, file_path):
-        """Process a document based on its file type."""
-        try:
-            if file_path.endswith(".pdf"):
-                self.process_pdf(file_path)
-            elif file_path.endswith(".html"):
-                self.process_html(file_path)
-            elif file_path.endswith(".txt"):
-                self.process_text(file_path)
-            else:
-                raise ValueError(f"Unsupported file type: {file_path}")
-        except Exception as e:
-            print(f"Error processing file {file_path}: {e}")
-
-    def _process_documents(self, documents):
-        print("Starting to process documents...")
-        for doc in documents:
-            # Print the type of the document
-            print(f"Document type: {type(doc)}")
-
-            # Extract text content from the document
-            if hasattr(doc, 'page_content') and isinstance(doc.page_content, str):
-                text_content = doc.page_content
-            elif isinstance(doc, str):
-                text_content = doc
-            else:
-                raise TypeError(f"Expected a string or an object with a 'page_content' attribute, got {type(doc)}")
-            print(f"Text content: {text_content[:100]}...")  # Print the first 100 characters for debugging
-            chunks = self.document_processor.text_splitter.split_text(text_content)
-            embeddings = self.embed_documents(chunks)
-            # Ensure embeddings and chunks are being added
-            #print(f"Adding to collection: {chunks}")
-            self.collection.add(embeddings=embeddings, documents=chunks)
-
-    # def embed_documents(self, texts):
-    #     inputs = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True)
-    #     with torch.no_grad():
-    #         outputs = self.model(**inputs)
-    #     return outputs.last_hidden_state.mean(dim=1).numpy()
+            logger.error(f"Error processing HTML {file_path}: {e}")
+            return None
 
     def embed_documents(self, texts):
-        """Embed documents using the HuggingFaceEmbeddings model."""
+        """Embed documents using the HuggingFace model"""
         return self.embedding_model.embed_documents(texts)

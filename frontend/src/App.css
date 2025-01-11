@@ -53,6 +53,7 @@
   padding: 10px;
   border-radius: 5px;
   max-width: 70%;
+  white-space: pre-wrap;
 }
 
 .message.user {
@@ -106,10 +107,32 @@ button:hover {
 
 .chat-buttons {
   display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
   gap: 5px;
 }
 
 .chat-buttons button {
   padding: 4px 8px;
   font-size: 12px;
+}
+
+.chat-buttons button:last-child {
+  background-color: #dc3545;
+}
+
+.chat-buttons button:last-child:hover {
+  background-color: #c82333;
+}
+
+.input-form button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.loading-indicator {
+  display: inline-block;
+  margin-left: 10px;
+  color: #666;
 }
