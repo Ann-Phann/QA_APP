@@ -19,10 +19,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class DocumentProcessor:
+    """
+    A class to handle document processing tasks, including loading, splitting, 
+    embedding, and storing documents in a vector database for semantic search.
+
+    Attributes:
+        DATA_PATH (Path): The base directory for document storage.
+        text_splitter (RecursiveCharacterTextSplitter): An instance for splitting text into chunks.
+        embedding_model (HuggingFaceEmbeddings): An instance for generating document embeddings.
+        chroma_client (chromadb.Client): A client for interacting with the ChromaDB vector database.
+        collection (chromadb.Collection): A collection in ChromaDB for storing document embeddings.
+    """
     # Base directory for document storage
     DATA_PATH = Path("source/documents")
 
     def __init__(self):
+        """
+        Initializes the DocumentProcessor with text splitting, embedding model, 
+        and vector storage setup.
+        """
         # Configure text splitting with overlap for better context preservation
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1024,  # Size of each text chunk
@@ -41,7 +56,12 @@ class DocumentProcessor:
         logger.info("DocumentProcessor initialized")
 
     def load_documents(self):
-        """Load PDFs and HTML files from the specified data directory"""
+        """
+        Load PDFs and HTML files from the specified data directory
+        Returns:
+            List[Document]: A list of Document objects containing the content 
+            and metadata of each loaded document.
+        """
         documents = []
         pdf_count = html_count = 0
 
@@ -74,7 +94,10 @@ class DocumentProcessor:
         return documents
 
     def process_documents(self):
-        """Process all documents and store in ChromaDB"""
+        """
+        Process all loaded documents by splitting them into chunks, embedding 
+        the chunks, and storing them in the vector database.
+        """
         # Start document loading phase
         logger.info("=== Starting Document Loading ===")
         documents = self.load_documents()
